@@ -167,8 +167,28 @@ function readJobId(value: unknown): string | undefined {
 }
 
 async function runOpenClawJson(args: string[]): Promise<unknown> {
-  const { stdout } = await runOpenClaw(args);
-  return JSON.parse(stdout);
+  let lastResult: { stdout: string; stderr: string } | undefined;
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    lastResult = await runOpenClaw(args);
+    if (lastResult.stdout.trim()) {
+      try {
+        return JSON.parse(lastResult.stdout);
+      } catch (error) {
+        throw new Error(
+          `Unable to parse OpenClaw JSON for ${args.join(" ")}: ${String(error)}; stdout=${JSON.stringify(
+            lastResult.stdout.slice(0, 500),
+          )}; stderr=${JSON.stringify(lastResult.stderr.slice(0, 500))}`,
+        );
+      }
+    }
+    await sleep(250 * attempt);
+  }
+
+  throw new Error(
+    `OpenClaw command returned empty JSON output for ${args.join(" ")}; stdout=${JSON.stringify(
+      lastResult?.stdout ?? "",
+    )}; stderr=${JSON.stringify(lastResult?.stderr ?? "")}`,
+  );
 }
 
 async function runOpenClaw(args: string[]): Promise<{ stdout: string; stderr: string }> {
@@ -177,4 +197,8 @@ async function runOpenClaw(args: string[]): Promise<{ stdout: string; stderr: st
     maxBuffer: 10 * 1024 * 1024,
   });
   return { stdout: result.stdout, stderr: result.stderr };
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
