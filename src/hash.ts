@@ -103,6 +103,15 @@ export function snapshotCronJob(raw: unknown): SnapshotJob | null {
   };
 }
 
+export function snapshotWithTimezone(snapshot: SnapshotJob, tz: string): SnapshotJob {
+  const stable = withTimezone(snapshot.stable, tz);
+  return {
+    stable,
+    stableHash: stableCronHash(stable),
+    raw: rawWithTimezone(snapshot.raw, tz),
+  };
+}
+
 export function stableCronHash(job: StableCronJob): string {
   return sha256(strictPersistedFields(job));
 }
@@ -247,4 +256,23 @@ function compactRecord<T extends Record<string, string | undefined>>(value: T): 
   return Object.fromEntries(
     Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
   ) as T;
+}
+
+function rawWithTimezone(raw: unknown, tz: string): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return raw;
+  }
+  const cloned = JSON.parse(JSON.stringify(raw)) as Record<string, unknown>;
+  const schedule = readObject(cloned.schedule);
+  cloned.schedule = {
+    ...schedule,
+    tz,
+  };
+  if ("tz" in cloned) {
+    cloned.tz = tz;
+  }
+  if ("timezone" in cloned) {
+    cloned.timezone = tz;
+  }
+  return cloned;
 }

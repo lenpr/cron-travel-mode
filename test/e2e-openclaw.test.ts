@@ -28,6 +28,7 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
     lateRestore: "",
     abort: "",
     drift: "",
+    adopt: "",
   };
 
   beforeAll(async () => {
@@ -58,6 +59,9 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
       tz: "America/Los_Angeles",
     });
     ids.drift = await createCronJob(`${prefix}-drift`, "41 4 * * *", {
+      tz: "America/Los_Angeles",
+    });
+    ids.adopt = await createCronJob(`${prefix}-adopt`, "43 4 * * *", {
       tz: "America/Los_Angeles",
     });
     await waitForJobIds(Object.values(ids));
@@ -260,6 +264,34 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
     });
     expect(forced.phase).toBe("restored");
     expect((await showStable(ids.drift)).schedule.tz).toBe("America/Los_Angeles");
+  }, 180_000);
+
+  it("adopts an already shifted job and restores it from the supplied original timezone", async () => {
+    const service = serviceFor("adopt");
+    await editJobTimezone(ids.adopt, "Europe/Berlin");
+    expect((await showStable(ids.adopt)).schedule.tz).toBe("Europe/Berlin");
+
+    const adopted = await service.adoptActive({
+      startsAt: new Date(Date.now() - 30 * 60_000).toISOString(),
+      endsAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+      targetTz: "Europe/Berlin",
+      source: "e2e simulated legacy manifest",
+      movedJobs: [
+        {
+          id: ids.adopt,
+          originalTz: "America/Los_Angeles",
+          reason: "Simulated legacy active trip.",
+        },
+      ],
+    });
+    expect(adopted.ok).toBe(true);
+    expect(adopted.phase).toBe("active");
+    expect((await showStable(ids.adopt)).schedule.tz).toBe("Europe/Berlin");
+
+    const restored = await service.restore({ expectedRevision: adopted.revision as number });
+    expect(restored.ok).toBe(true);
+    expect(restored.phase).toBe("restored");
+    expect((await showStable(ids.adopt)).schedule.tz).toBe("America/Los_Angeles");
   }, 180_000);
 
   async function createCronJob(

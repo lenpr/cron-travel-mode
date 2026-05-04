@@ -2,6 +2,7 @@ export const PLUGIN_ID = "cron-travel-mode";
 
 export const TOOL_NAMES = {
   generate: "generate_travel_cron_plan",
+  adopt: "adopt_active_travel_cron_plan",
   apply: "apply_travel_cron_plan",
   restore: "restore_travel_cron_plan",
   recover: "abort_or_recover_travel_cron",
@@ -148,6 +149,13 @@ export interface RestoreState {
   ledger: OperationLedgerEntry[];
 }
 
+export interface AdoptionState {
+  adoptedAt: string;
+  source?: string;
+  jobIds: string[];
+  warnings: string[];
+}
+
 export interface ConfirmationRequest {
   operationId: string;
   kind: ConfirmationKind;
@@ -168,6 +176,7 @@ export interface TravelCronState {
   committed?: CommittedState;
   apply?: ApplyState;
   restore?: RestoreState;
+  adoption?: AdoptionState;
   pendingConfirmation?: ConfirmationRequest;
   attentionRequired?: string;
   lastError?: string;
@@ -182,6 +191,12 @@ export interface InventoryFilter {
 export interface DecisionInput {
   id: string;
   decision: Decision;
+  reason?: string;
+}
+
+export interface AdoptedJobInput {
+  id: string;
+  originalTz: string;
   reason?: string;
 }
 

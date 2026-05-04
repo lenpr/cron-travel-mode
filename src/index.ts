@@ -150,6 +150,41 @@ export default definePluginEntry({
 
     api.registerTool(
       {
+        name: TOOL_NAMES.adopt,
+        label: "Adopt active travel cron plan",
+        description:
+          "Import already travel-shifted cron jobs into plugin state so the plugin can safely own their restore path without editing cron during adoption.",
+        parameters: Type.Object(
+          {
+            startsAt: Type.String(),
+            endsAt: Type.String(),
+            targetTz: Type.String(),
+            expectedRevision: ExpectedRevisionSchema,
+            source: Type.Optional(Type.String()),
+            lateRestoreThresholdHours: Type.Optional(Type.Number()),
+            activationGraceMinutes: Type.Optional(Type.Number()),
+            movedJobs: Type.Array(
+              Type.Object(
+                {
+                  id: Type.String(),
+                  originalTz: Type.String(),
+                  reason: Type.Optional(Type.String()),
+                },
+                { additionalProperties: false },
+              ),
+            ),
+          },
+          { additionalProperties: false },
+        ),
+        async execute(_id, params) {
+          return result(await service.adoptActive(params as AdoptToolInput));
+        },
+      },
+      { optional: true },
+    );
+
+    api.registerTool(
+      {
         name: TOOL_NAMES.restore,
         label: "Restore travel cron plan",
         description:
@@ -255,6 +290,21 @@ interface ApplyToolInput {
   expectedRevision?: number;
   activationMode?: "now" | "scheduled";
   confirmOperationId?: string;
+}
+
+interface AdoptToolInput {
+  startsAt: string;
+  endsAt: string;
+  targetTz: string;
+  expectedRevision?: number;
+  source?: string;
+  lateRestoreThresholdHours?: number;
+  activationGraceMinutes?: number;
+  movedJobs: Array<{
+    id: string;
+    originalTz: string;
+    reason?: string;
+  }>;
 }
 
 interface RestoreToolInput {

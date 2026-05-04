@@ -231,6 +231,65 @@ describe("travel cron plan flow", () => {
     expect(cron.timezone("gratitude")).toBe("America/Los_Angeles");
   });
 
+  it("adopts already shifted live cron jobs and restores them from supplied original timezones", async () => {
+    cron.mutate("gratitude", (job) => {
+      job.schedule = {
+        ...(job.schedule ?? {}),
+        kind: "cron",
+        expr: "0 9 * * *",
+        tz: "Europe/Berlin",
+      };
+    });
+
+    const adopted = await service.adoptActive({
+      startsAt: "2026-05-01T06:00:00.000Z",
+      endsAt: "2026-05-06T08:00:00.000Z",
+      targetTz: "Europe/Berlin",
+      source: "legacy manifest",
+      movedJobs: [
+        {
+          id: "gratitude",
+          originalTz: "America/Los_Angeles",
+          reason: "Legacy travel mode moved this reminder.",
+        },
+      ],
+    });
+
+    expect(adopted.ok).toBe(true);
+    expect(adopted.phase).toBe("active");
+    expect(cron.timezone("gratitude")).toBe("Europe/Berlin");
+    const state = loadState(createStatePaths(tmpDir));
+    expect(state?.adoption).toMatchObject({
+      source: "legacy manifest",
+      jobIds: ["gratitude"],
+    });
+
+    const restored = await service.restore({ expectedRevision: adopted.revision as number });
+    expect(restored.ok).toBe(true);
+    expect(restored.phase).toBe("restored");
+    expect(cron.timezone("gratitude")).toBe("America/Los_Angeles");
+    expect(cron.edits.at(-1)).toMatchObject({
+      id: "gratitude",
+      message: "Message for gratitude",
+      session: "main",
+      cron: "0 9 * * *",
+      targetTz: "America/Los_Angeles",
+    });
+  });
+
+  it("rejects adoption when the live job is not in the declared target timezone", async () => {
+    const adopted = await service.adoptActive({
+      startsAt: "2026-05-01T06:00:00.000Z",
+      endsAt: "2026-05-06T08:00:00.000Z",
+      targetTz: "Europe/Berlin",
+      movedJobs: [{ id: "gratitude", originalTz: "America/Los_Angeles" }],
+    });
+
+    expect(adopted.ok).toBe(false);
+    expect(adopted.code).toBe("adopt_target_timezone_mismatch");
+    expect(cron.timezone("gratitude")).toBe("America/Los_Angeles");
+  });
+
   it("detects incompatible cron edit behavior and best-effort restores the edited job", async () => {
     const committed = await committedPlan();
     cron.incompatibleEdit = true;

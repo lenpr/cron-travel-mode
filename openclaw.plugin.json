@@ -9,6 +9,7 @@
   "contracts": {
     "tools": [
       "generate_travel_cron_plan",
+      "adopt_active_travel_cron_plan",
       "apply_travel_cron_plan",
       "restore_travel_cron_plan",
       "abort_or_recover_travel_cron",

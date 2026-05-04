@@ -6,7 +6,7 @@ import {
   samePersistedExceptTimezone,
   sha256,
   snapshotCronJob,
-  stableCronHash,
+  snapshotWithTimezone,
   stableStringify,
   strictPersistedFields,
   toDraftSummary,
@@ -22,6 +22,7 @@ import {
   writeState,
 } from "./state.js";
 import type {
+  AdoptedJobInput,
   ConfirmationKind,
   CronClient,
   Decision,
@@ -91,6 +92,17 @@ export interface GenerateDraftParams {
 export interface CommitPlanParams {
   expectedRevision: number;
   decisions: DecisionInput[];
+}
+
+export interface AdoptActivePlanParams {
+  startsAt: string;
+  endsAt: string;
+  targetTz: string;
+  movedJobs: AdoptedJobInput[];
+  expectedRevision?: number;
+  source?: string;
+  lateRestoreThresholdHours?: number;
+  activationGraceMinutes?: number;
 }
 
 export interface ApplyPlanParams {
@@ -301,6 +313,137 @@ export class TravelCronService {
         stayJobIds,
         needsReviewJobIds,
         warnings,
+      };
+    });
+  }
+
+  async adoptActive(params: AdoptActivePlanParams): Promise<ToolBody> {
+    return this.mutate("adopt", async () => {
+      let state = await this.reconcileLoaded(loadState(this.paths));
+      assertExpectedRevision(state, params.expectedRevision);
+      if (state && !TERMINAL_PHASES.has(state.phase)) {
+        throw new TravelCronError(
+          "single_plan_active",
+          `Cannot adopt an active travel cron plan while the current plan is ${state.phase}. Restore, cancel, or recover it first.`,
+          { phase: state.phase, revision: state.revision },
+        );
+      }
+
+      const trip = buildTripWindow(params, this.config);
+      validateTripWindow(trip);
+      const movedJobs = normalizeAdoptedJobs(params.movedJobs);
+      const currentById = await this.refetchSnapshotMap();
+      const nowIso = this.nowIso();
+
+      const decisions: Record<string, { decision: Decision; reason?: string; stableHashAtDraft: string }> = {};
+      const moveSnapshot: Record<string, SnapshotJob> = {};
+      const applySnapshot: Record<string, SnapshotJob> = {};
+      const ledger: OperationLedgerEntry[] = [];
+      const warnings: string[] = [
+        "This plan was adopted from an already-shifted live cron state; restore snapshots were synthesized from current persisted fields plus the supplied original timezone.",
+      ];
+
+      for (const movedJob of movedJobs) {
+        validateIanaTimezone(movedJob.originalTz, `originalTz for ${movedJob.id}`);
+        if (movedJob.originalTz === trip.targetTz) {
+          throw new TravelCronError(
+            "adopt_no_timezone_change",
+            `Adopted job ${movedJob.id} has the same original timezone as targetTz.`,
+            { jobId: movedJob.id, timezone: movedJob.originalTz },
+          );
+        }
+
+        const current = currentById[movedJob.id];
+        if (!current) {
+          throw new TravelCronError(
+            "adopt_job_missing",
+            `Adopted job ${movedJob.id} does not exist in OpenClaw cron.`,
+            { jobId: movedJob.id },
+          );
+        }
+        if (!current.stable.schedule.tz) {
+          throw new TravelCronError(
+            "adopt_implicit_timezone_refused",
+            `Adopted job ${movedJob.id} has no explicit current timezone.`,
+            { jobId: movedJob.id },
+          );
+        }
+        if (current.stable.schedule.tz !== trip.targetTz) {
+          throw new TravelCronError(
+            "adopt_target_timezone_mismatch",
+            `Adopted job ${movedJob.id} is currently in ${current.stable.schedule.tz}, not targetTz ${trip.targetTz}.`,
+            {
+              jobId: movedJob.id,
+              currentTz: current.stable.schedule.tz,
+              targetTz: trip.targetTz,
+            },
+          );
+        }
+
+        const original = snapshotWithTimezone(current, movedJob.originalTz);
+        moveSnapshot[movedJob.id] = original;
+        applySnapshot[movedJob.id] = original;
+        decisions[movedJob.id] = {
+          decision: "move",
+          reason: movedJob.reason,
+          stableHashAtDraft: original.stableHash,
+        };
+        ledger.push({
+          jobId: movedJob.id,
+          operation: "apply",
+          status: "applied",
+          fromTz: movedJob.originalTz,
+          toTz: trip.targetTz,
+          message: "Adopted from live travel-shifted cron state.",
+          updatedAt: nowIso,
+        });
+      }
+
+      const baseState =
+        state && TERMINAL_PHASES.has(state.phase)
+          ? { ...makeInitialState("active", nowIso), revision: state.revision }
+          : makeInitialState("active", nowIso);
+      state = this.save({
+        ...baseState,
+        phase: "active",
+        trip,
+        draft: undefined,
+        committed: {
+          committedAt: nowIso,
+          decisions,
+          moveJobIds: movedJobs.map((job) => job.id),
+          stayJobIds: [],
+          needsReviewJobIds: [],
+          moveSnapshot,
+          warnings,
+        },
+        apply: {
+          appliedAt: nowIso,
+          applySnapshot,
+          ledger,
+        },
+        restore: undefined,
+        adoption: {
+          adoptedAt: nowIso,
+          source: params.source,
+          jobIds: movedJobs.map((job) => job.id),
+          warnings,
+        },
+        pendingConfirmation: undefined,
+        attentionRequired: undefined,
+        lastError: undefined,
+      });
+
+      return {
+        ok: true,
+        phase: state.phase,
+        revision: state.revision,
+        message:
+          "Adopted the active travel cron state. Cron was not edited; moved jobs are now plugin-owned for safe restore.",
+        adoptedJobIds: movedJobs.map((job) => job.id),
+        restoreDueAt: trip.endsAt,
+        warnings,
+        safestNextAction: "travel_cron_status",
       };
     });
   }
@@ -1121,14 +1264,46 @@ function validateTripWindow(trip: TripWindow): void {
   if (startsAt >= endsAt) {
     throw new TravelCronError("invalid_trip_window", "startsAt must be before endsAt.");
   }
+  validateIanaTimezone(trip.targetTz, "targetTz");
+}
+
+function validateIanaTimezone(timezone: string, label: string): void {
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: trip.targetTz }).format(new Date(startsAt));
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date(0));
   } catch {
     throw new TravelCronError(
       "invalid_timezone",
-      `targetTz must be a valid IANA timezone, got ${trip.targetTz}.`,
+      `${label} must be a valid IANA timezone, got ${timezone}.`,
     );
   }
+}
+
+function normalizeAdoptedJobs(movedJobs: AdoptedJobInput[]): AdoptedJobInput[] {
+  if (!Array.isArray(movedJobs) || movedJobs.length === 0) {
+    throw new TravelCronError(
+      "adopt_jobs_required",
+      "Adoption requires at least one moved job with id and originalTz.",
+    );
+  }
+
+  const seen = new Set<string>();
+  return movedJobs.map((job) => {
+    if (!job.id || !job.originalTz) {
+      throw new TravelCronError(
+        "adopt_job_invalid",
+        "Each adopted moved job requires id and originalTz.",
+        job,
+      );
+    }
+    if (seen.has(job.id)) {
+      throw new TravelCronError(
+        "duplicate_adopted_job",
+        `Adopted job ${job.id} was provided more than once.`,
+      );
+    }
+    seen.add(job.id);
+    return { ...job };
+  });
 }
 
 function normalizeDecisions(
