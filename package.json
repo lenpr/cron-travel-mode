@@ -1,0 +1,51 @@
+{
+  "name": "@openclaw-labs/cron-travel-mode",
+  "version": "0.1.0",
+  "description": "OpenClaw plugin for temporarily moving approved cron jobs to travel-local time and restoring them safely.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run build && npm run test"
+  },
+  "engines": {
+    "node": ">=22",
+    "openclaw": ">=2026.5.3-1"
+  },
+  "openclaw": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.5.3-1",
+      "minGatewayVersion": ">=2026.5.3-1"
+    },
+    "install": {
+      "minHostVersion": ">=2026.5.3-1"
+    },
+    "build": {
+      "openclawVersion": "2026.5.3-1",
+      "pluginSdkVersion": "2026.5.3-1"
+    }
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.5.3-1"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.49"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "openclaw": "^2026.5.3-1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  }
+}
