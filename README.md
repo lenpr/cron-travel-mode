@@ -67,7 +67,7 @@ After each edit, the plugin refetches the job and verifies that persisted non-ti
 Prerequisites:
 
 - Node.js 22 or newer
-- OpenClaw `2026.5.3-1` or newer
+- OpenClaw `2026.5.2` or newer
 
 Install dependencies:
 
@@ -80,6 +80,45 @@ Run type checks and tests:
 ```bash
 npm run check
 ```
+
+## Install From GitHub
+
+Install the plugin on an OpenClaw host from a local checkout:
+
+```bash
+git clone https://github.com/lenpr/cron-travel-mode.git
+cd cron-travel-mode
+npm ci
+openclaw plugins install --link --force "$PWD"
+openclaw plugins enable cron-travel-mode
+openclaw plugins doctor
+```
+
+If `openclaw` is not on `PATH` in non-interactive SSH shells, use the absolute binary path. On some hosts this is:
+
+```bash
+/home/openclaw/.npm-global/bin/openclaw
+```
+
+The tools are registered as optional because they can mutate cron jobs. Make sure the plugin or individual tools are allowed in your OpenClaw tool configuration before asking an agent to use them.
+
+## End-To-End Test Against OpenClaw
+
+The normal test suite uses a fake cron client and never touches a real OpenClaw scheduler:
+
+```bash
+npm run check
+```
+
+To run the guarded e2e test against a real OpenClaw host, opt in explicitly:
+
+```bash
+OPENCLAW_BIN=/home/openclaw/.npm-global/bin/openclaw npm run test:e2e:openclaw
+```
+
+The e2e test creates three disabled disposable cron jobs with names prefixed by `ctm-e2e-*`, moves only the approved explicit-timezone job to `Europe/Berlin`, restores it to `America/Los_Angeles`, verifies disabled state is preserved, and removes the disposable jobs in cleanup.
+
+See [docs/remote-openclaw-test.md](docs/remote-openclaw-test.md) for the remote-host test procedure.
 
 ## License
 

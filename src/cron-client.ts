@@ -56,6 +56,7 @@ export class OpenClawCliCronClient implements CronClient {
       "--tz",
       targetTz,
     ];
+    args.push(stable.enabled ? "--enable" : "--disable");
 
     try {
       await this.run(this.command, args);
