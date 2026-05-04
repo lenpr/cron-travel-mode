@@ -6,7 +6,7 @@ Native TypeScript OpenClaw plugin for temporarily moving approved explicit-timez
 
 The plugin owns deterministic mechanics only:
 
-- inventory compaction and stable hashing
+- inventory compaction and stable hashing, including disabled jobs via `cron list --all --json`
 - single-plan JSON state
 - lock-file and revision safety
 - cron timezone mutation through `openclaw cron`
@@ -31,7 +31,7 @@ Cron Travel Mode is intentionally conservative:
 ## Tools
 
 - `generate_travel_cron_plan`
-  - `action: "draft"` fetches cron inventory and returns compact job summaries.
+  - `action: "draft"` fetches cron inventory, including disabled jobs, and returns compact job summaries.
   - `action: "commit"` persists move, stay, and needs_review decisions.
 - `apply_travel_cron_plan`
   - applies immediately or marks a committed plan for passive activation.

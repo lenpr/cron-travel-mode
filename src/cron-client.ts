@@ -17,7 +17,7 @@ export class OpenClawCliCronClient implements CronClient {
   ) {}
 
   async listJobs(): Promise<unknown[]> {
-    const output = await this.runJson(["cron", "list", "--json"]);
+    const output = await this.runJson(["cron", "list", "--all", "--json"]);
     return unwrapJobs(output);
   }
 

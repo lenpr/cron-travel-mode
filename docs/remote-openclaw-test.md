@@ -24,7 +24,7 @@ Check the host:
 ```bash
 ssh horst-tailscale-openclaw "$OPENCLAW --version"
 ssh horst-tailscale-openclaw "$OPENCLAW plugins doctor"
-ssh horst-tailscale-openclaw "$OPENCLAW cron list --json"
+ssh horst-tailscale-openclaw "$OPENCLAW cron list --all --json"
 ```
 
 ## Install Or Update The Plugin
@@ -41,8 +41,9 @@ ssh horst-tailscale-openclaw '
   fi
   cd ~/Coding/cron-travel-mode
   npm ci
-  "$OPENCLAW" plugins install --link --force "$PWD"
+  "$OPENCLAW" plugins install --link "$PWD"
   "$OPENCLAW" plugins enable cron-travel-mode
+  "$OPENCLAW" gateway restart
   "$OPENCLAW" plugins doctor
 '
 ```
@@ -70,7 +71,7 @@ Expected result:
 
 ```bash
 ssh horst-tailscale-openclaw '
-  /home/openclaw/.npm-global/bin/openclaw cron list --json |
+  /home/openclaw/.npm-global/bin/openclaw cron list --all --json |
     node -e "let s=\"\";process.stdin.on(\"data\",d=>s+=d);process.stdin.on(\"end\",()=>{const j=JSON.parse(s);const jobs=Array.isArray(j)?j:(j.jobs||j.items||[]);console.log(jobs.filter(job=>JSON.stringify(job).includes(\"ctm-e2e-\")).length)})"
 '
 ```

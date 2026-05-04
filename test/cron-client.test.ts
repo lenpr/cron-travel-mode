@@ -61,4 +61,16 @@ describe("OpenClawCliCronClient", () => {
     ).rejects.toMatchObject({ code: "implicit_timezone_refused" });
     expect(calls).toHaveLength(0);
   });
+
+  it("lists with --all so disabled jobs are included in review inventory", async () => {
+    const calls: Array<{ command: string; args: string[] }> = [];
+    const client = new OpenClawCliCronClient("openclaw", async (command, args) => {
+      calls.push({ command, args });
+      return { stdout: JSON.stringify({ jobs: [] }), stderr: "" };
+    });
+
+    await client.listJobs();
+
+    expect(calls[0]?.args).toEqual(["cron", "list", "--all", "--json"]);
+  });
 });
