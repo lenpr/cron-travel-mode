@@ -8,6 +8,8 @@ This project follows the Keep a Changelog section style.
 
 - Added `PROMPT_REQUEST.md`, `AGENTS.md`, and architecture documentation for maintainers, agents, and reimplementers.
 - Expanded documentation for real OpenClaw e2e coverage and disposable enabled `--no-deliver` jobs.
+- Added adoption guidance for hosts that already have travel-mode cron changes applied.
+- Added doctor and allow-list smoke-test documentation for safer OpenClaw installs.
 
 ## 0.1.0 - 2026-05-04
 

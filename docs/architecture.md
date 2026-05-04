@@ -27,6 +27,7 @@ The plugin is responsible for:
 stateDiagram-v2
   [*] --> draft: draft inventory
   draft --> committed: commit decisions
+  [*] --> active: adopt existing shifted jobs
   committed --> scheduled: schedule activation
   committed --> active: apply now
   scheduled --> active: passive activation
@@ -50,6 +51,8 @@ Terminal phases such as `restored`, `cancelled`, and `missed_activation_noop` al
 - `draft`: fetches cron inventory, stores the raw snapshot, returns compact summaries
 - `commit`: stores explicit `move`, `stay`, and `needs_review` decisions
 
+`adopt_active_travel_cron_plan` imports an already active, already shifted travel state. It requires absolute trip instants, the travel `targetTz`, and a per-job manifest of `id` plus `originalTz`. Adoption does not edit cron; it verifies current jobs are explicitly in `targetTz`, synthesizes original restore snapshots from current persisted fields plus `originalTz`, and records the jobs as plugin-owned moved jobs.
+
 `apply_travel_cron_plan` applies now or marks a committed plan as scheduled for passive activation.
 
 `restore_travel_cron_plan` restores moved jobs from the apply-time snapshot and skips drifted jobs unless force is confirmed.
@@ -58,11 +61,15 @@ Terminal phases such as `restored`, `cancelled`, and `missed_activation_noop` al
 
 `travel_cron_status` reports phase, drift, pending confirmations, attention required, and the safest next action.
 
+`travel_cron_doctor` is an installation and ownership self-check. It reports plugin paths, state paths, legacy helper cron matches, plugin-owned moved jobs, drift, and allow-list verification guidance. It is intentionally non-mutating for cron and does not run passive activation or restore; use status when passive reconciliation should be allowed.
+
 ## Safety Boundaries
 
 Only recurring cron jobs with explicit timezones can be moved. Implicit-timezone jobs are forced to `needs_review`.
 
 The move operation keeps the cron expression and changes only the timezone. The restore operation uses the apply-time snapshot, not the original draft snapshot, so it restores what was actually changed.
+
+Adopted plans use synthesized apply-time snapshots. Because the plugin cannot know a shifted job's original timezone, adoption requires the operator or migration manifest to provide `originalTz` for every moved job.
 
 Commit rejects changed or missing `move` jobs. Changed `stay` jobs produce a warning but do not block commit because they will never be touched.
 

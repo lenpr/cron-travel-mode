@@ -50,6 +50,37 @@ ssh horst-tailscale-openclaw '
 '
 ```
 
+## Allow Tools And Smoke Test
+
+If the host uses a tool allow-list, confirm `cron-travel-mode` or its individual tools are allowed:
+
+```bash
+ssh horst-tailscale-openclaw '
+  /home/openclaw/.npm-global/bin/openclaw config get tools.allow
+'
+```
+
+After changing allow-list config through the host's normal OpenClaw configuration workflow, validate and restart:
+
+```bash
+ssh horst-tailscale-openclaw '
+  set -euo pipefail
+  OPENCLAW=/home/openclaw/.npm-global/bin/openclaw
+  "$OPENCLAW" config validate
+  "$OPENCLAW" gateway restart
+  "$OPENCLAW" plugins doctor
+'
+```
+
+Use the doctor tool as the first plugin smoke test:
+
+```bash
+ssh horst-tailscale-openclaw '
+  /home/openclaw/.npm-global/bin/openclaw agent --local --json \
+    --message "Call the cron-travel-mode tool travel_cron_doctor now and return its result."
+'
+```
+
 ## Run The E2E Test
 
 ```bash
@@ -71,6 +102,8 @@ Expected result:
 - overdue restore requires confirmation before reverting timezones
 - early active abort requires confirmation before reverting timezones
 - manually drifted moved jobs are skipped until force restore is confirmed
+- an already shifted disposable job can be adopted and restored from a supplied original timezone
+- the doctor surface reports plugin-owned moved jobs
 - restore returns moved jobs to their original timezone
 - all disposable jobs are removed
 

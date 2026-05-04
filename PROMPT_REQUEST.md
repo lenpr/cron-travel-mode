@@ -13,6 +13,7 @@ The user should be able to:
 - explicitly leave other jobs unchanged
 - mark ambiguous jobs for review rather than editing them
 - apply the approved timezone changes immediately or schedule them for passive activation
+- adopt already-shifted cron jobs after migrating from a legacy or manual travel-mode setup
 - restore moved jobs to their original timezone after the trip
 - recover deterministically from partial apply, partial restore, cancellation, overdue restore, or manual drift
 
@@ -60,6 +61,8 @@ The draft phase should fetch the current cron inventory and store the raw snapsh
 
 The commit phase should persist explicit decisions: `move`, `stay`, or `needs_review`.
 
+The adoption path should exist for migration only. If a host already has travel-mode timezone changes applied before installing the plugin, the plugin should be able to adopt those live moved jobs from an explicit manifest. That manifest must include each job id and its original timezone because the plugin cannot infer the home timezone from the current shifted schedule. Adoption should not edit cron; it should only verify the current travel timezone and create restore ownership state.
+
 ## Cron Jobs That May Be Edited
 
 Only recurring cron jobs with explicit IANA timezones should be editable.
@@ -94,6 +97,8 @@ Restore should:
 - preserve the user's external edits wherever possible
 
 Abort during an active trip should use the same safe restore path. Because restoring early can change when jobs next fire, it should require explicit confirmation before reverting active travel schedules.
+
+Adoption should synthesize apply-time restore snapshots from the current persisted cron fields plus the supplied original timezone. This keeps restore deterministic after migration while avoiding any attempt to discover or guess historical state.
 
 ## Confirmation Model
 
@@ -164,6 +169,8 @@ Expose one deterministic escape hatch for recovery. It should handle:
 
 The recovery result should be human-readable and should recommend the safest next action. It should not dump raw internal JSON at the user.
 
+Expose a doctor or self-check surface for operators. It should report the plugin path, state path, legacy helper cron matches, whether moved jobs are plugin-owned, drift, and the limits of any allow-list visibility. The user should have a safe smoke-test tool before asking the agent to mutate cron.
+
 ## Non-Goals For V1
 
 Do not implement overlapping trips.
@@ -179,6 +186,8 @@ Do not silently force restore drifted jobs.
 Do not mutate cron through undocumented APIs or hidden state files.
 
 Do not send raw cron inventory to the LLM.
+
+Do not pretend the plugin can infer historical restore state. Migration/adoption requires explicit original-timezone input.
 
 ## Testing Expectations
 
@@ -198,6 +207,8 @@ Unit tests should cover:
 - early abort confirmation
 - partial apply and partial restore recovery
 - drift detection and force restore
+- adoption from already shifted jobs
+- doctor/self-check reporting
 
 End-to-end tests against a real OpenClaw host should use disposable cron jobs only. They should verify:
 
@@ -211,6 +222,8 @@ End-to-end tests against a real OpenClaw host should use disposable cron jobs on
 - overdue restore requires confirmation
 - early abort requires confirmation
 - drifted jobs are skipped until force confirmation
+- already shifted jobs can be adopted and restored
+- the doctor surface reports plugin-owned moved jobs
 - all disposable jobs are cleaned up
 
 ## Success Criteria

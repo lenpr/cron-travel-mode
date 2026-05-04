@@ -41,6 +41,8 @@ Cron Travel Mode is intentionally conservative:
 - `generate_travel_cron_plan`
   - `action: "draft"` fetches cron inventory, including disabled jobs, and returns compact job summaries.
   - `action: "commit"` persists move, stay, and needs_review decisions.
+- `adopt_active_travel_cron_plan`
+  - imports already travel-shifted cron jobs from an explicit original-timezone manifest so the plugin can own restore state after migration.
 - `apply_travel_cron_plan`
   - applies immediately or marks a committed plan for passive activation.
 - `restore_travel_cron_plan`
@@ -49,6 +51,8 @@ Cron Travel Mode is intentionally conservative:
   - deterministic cancel, abort, partial-apply, partial-restore, and recovery entrypoint.
 - `travel_cron_status`
   - returns plain-language state, drift, pending confirmations, and safest next action.
+- `travel_cron_doctor`
+  - reports install health, state paths, legacy helper cron matches, plugin-owned moved jobs, drift, and allow-list verification guidance.
 
 ## State
 
@@ -132,6 +136,61 @@ If `openclaw` is not on `PATH` in non-interactive SSH shells, use the absolute b
 ```
 
 The tools are registered as optional because they can mutate cron jobs. Make sure the plugin or individual tools are allowed in your OpenClaw tool configuration before asking an agent to use them.
+
+## Tool Allow-List
+
+On hosts that enforce `tools.allow`, add the plugin id or the individual tool names before asking an agent to plan or mutate cron:
+
+```bash
+openclaw config get tools.allow
+```
+
+If the plugin is not allowed, patch the host configuration using your normal OpenClaw config workflow, then validate and restart:
+
+```bash
+openclaw config validate
+openclaw gateway restart
+openclaw plugins doctor
+```
+
+After restart, run the plugin self-check through an agent session:
+
+```bash
+openclaw agent --local --json --message "Call the cron-travel-mode tool travel_cron_doctor now and return its result."
+```
+
+The doctor tool can confirm that it is callable, list the registered tool names, and report the plugin state path. The OpenClaw plugin SDK does not expose the full host `tools.allow` list to plugin code, so use `openclaw config get tools.allow` as the source of truth for allow-list setup.
+
+## Migration And Adoption
+
+If you install the plugin on a host that already has travel-mode cron timezone changes applied, do not draft a new trip first. The plugin cannot infer the original timezone from a live shifted cron job.
+
+Use `adopt_active_travel_cron_plan` with:
+
+- absolute `startsAt` and `endsAt` instants for the current trip
+- the live travel `targetTz`
+- `movedJobs` entries containing each shifted cron job id and its `originalTz`
+
+Adoption does not edit cron. It verifies each listed job currently has an explicit timezone equal to `targetTz`, synthesizes restore snapshots from current persisted fields plus `originalTz`, records the jobs as already applied, and moves the plugin state to `active`.
+
+After adoption, run:
+
+```bash
+openclaw agent --local --json --message "Call travel_cron_status for cron-travel-mode and report the safest next action."
+```
+
+If `travel_cron_doctor` reports no plugin-owned moved jobs but you know jobs are already travel-shifted, use adoption before restore.
+
+## Non-Interactive Smoke Tests
+
+Some OpenClaw installations do not expose a direct `openclaw invoke` command, or may exclude invoke-style helpers from `plugins.allow`. The portable smoke path is an explicit local agent turn:
+
+```bash
+openclaw agent --local --json --message "Call the cron-travel-mode tool travel_cron_doctor now. Do not change cron."
+openclaw agent --local --json --message "Call the cron-travel-mode tool travel_cron_status now. Do not change cron unless passive reconciliation is due."
+```
+
+`travel_cron_status` participates in passive reconciliation, so it can apply or restore when the stored trip window says that action is due. Use `travel_cron_doctor` when you only need installation and ownership health.
 
 ## End-To-End Test Against OpenClaw
 
