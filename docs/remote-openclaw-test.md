@@ -4,9 +4,10 @@ This document describes the manual procedure used to validate Cron Travel Mode a
 
 ## Safety Rules
 
-- Use disabled disposable cron jobs only.
+- Use disposable cron jobs only.
 - Prefix disposable job names with `ctm-e2e-`.
 - Use `--no-deliver` so runner fallback delivery stays disabled.
+- Enabled disposable jobs are allowed only with `--no-deliver`.
 - Filter drafts by the disposable prefix.
 - Remove disposable jobs after the test.
 - Do not approve existing user cron jobs during e2e validation.

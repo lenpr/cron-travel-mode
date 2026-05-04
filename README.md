@@ -2,6 +2,14 @@
 
 Native TypeScript OpenClaw plugin for temporarily moving approved explicit-timezone cron jobs to travel-local time and restoring them safely.
 
+## Documentation Map
+
+- [PROMPT_REQUEST.md](PROMPT_REQUEST.md): intent and design choices for reimplementation.
+- [AGENTS.md](AGENTS.md): coding-agent guide for maintaining this repository.
+- [docs/architecture.md](docs/architecture.md): state machine, tool flow, and safety boundaries.
+- [docs/remote-openclaw-test.md](docs/remote-openclaw-test.md): guarded real-host e2e procedure.
+- [docs/clawhub-publishing.md](docs/clawhub-publishing.md): ClawHub release checklist.
+
 ## What it does
 
 The plugin owns deterministic mechanics only:
@@ -139,7 +147,7 @@ To run the guarded e2e test against a real OpenClaw host, opt in explicitly:
 OPENCLAW_BIN=/home/openclaw/.npm-global/bin/openclaw npm run test:e2e:openclaw
 ```
 
-The e2e test creates three disabled disposable cron jobs with names prefixed by `ctm-e2e-*`, moves only the approved explicit-timezone job to `Europe/Berlin`, restores it to `America/Los_Angeles`, verifies disabled state is preserved, and removes the disposable jobs in cleanup.
+The e2e test creates disposable cron jobs with names prefixed by `ctm-e2e-*`, including one enabled `--no-deliver` job. It verifies move, stay, implicit-timezone refusal, enabled/disabled preservation, passive activation, missed activation, late restore confirmation, early abort confirmation, drift skip, force restore, and cleanup.
 
 See [docs/remote-openclaw-test.md](docs/remote-openclaw-test.md) for the remote-host test procedure.
 

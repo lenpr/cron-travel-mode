@@ -83,6 +83,6 @@ OpenClaw validates the package's advertised plugin API and gateway compatibility
 - `git status --short` is empty for the commit or tag being published.
 - `CHANGELOG.md` or GitHub release notes summarize user-visible changes.
 - `npm run check` passes locally.
-- `npm run pack:dry-run` includes `dist/`, `src/`, `openclaw.plugin.json`, `README.md`, `LICENSE`, and `docs/`.
+- `npm run pack:dry-run` includes `dist/`, `src/`, `openclaw.plugin.json`, `README.md`, `PROMPT_REQUEST.md`, `AGENTS.md`, `LICENSE`, and `docs/`.
 - `npm run clawhub:dry-run` succeeds.
 - Optional real-host e2e passes with `OPENCLAW_BIN=/path/to/openclaw npm run test:e2e:openclaw`.

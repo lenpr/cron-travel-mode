@@ -16,6 +16,8 @@
     "src",
     "openclaw.plugin.json",
     "README.md",
+    "PROMPT_REQUEST.md",
+    "AGENTS.md",
     "LICENSE",
     "CHANGELOG.md",
     "docs"

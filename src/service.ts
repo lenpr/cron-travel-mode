@@ -38,6 +38,8 @@ import type {
 } from "./types.js";
 import { TravelCronError } from "./types.js";
 
+// Centralized state machine for all mutating tools. Keeping the phase transitions
+// together makes revision checks, confirmations, and recovery behavior auditable.
 const TERMINAL_PHASES = new Set<TravelCronPhase>([
   "restored",
   "cancelled",
