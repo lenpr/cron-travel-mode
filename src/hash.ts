@@ -60,6 +60,7 @@ export function normalizeCronJob(raw: unknown): StableCronJob | null {
   const session =
     readString(delivery.session) ??
     readString(payload.session) ??
+    readString(job.sessionTarget) ??
     readString(job.session);
   const message =
     readString(delivery.message) ??
@@ -74,7 +75,7 @@ export function normalizeCronJob(raw: unknown): StableCronJob | null {
     delivery: compactRecord({ session, message }),
   };
 
-  const agent = readString(job.agent) ?? readString(payload.agent);
+  const agent = readString(job.agent) ?? readString(job.agentId) ?? readString(payload.agent);
   if (agent) {
     normalized.agent = agent;
   }
