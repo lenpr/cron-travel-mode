@@ -136,7 +136,7 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
   }
 
   async function listStableJobs() {
-    const listed = await runOpenClawJson(["cron", "list", "--json"]);
+    const listed = await runOpenClawJson(["cron", "list", "--all", "--json"]);
     const jobs = Array.isArray(listed)
       ? listed
       : ((listed as { jobs?: unknown[]; items?: unknown[] }).jobs ??
@@ -148,7 +148,7 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
   }
 
   async function removeJobsByPrefix(namePrefix: string): Promise<void> {
-    const listed = await runOpenClawJson(["cron", "list", "--json"]);
+    const listed = await runOpenClawJson(["cron", "list", "--all", "--json"]);
     const jobs = Array.isArray(listed)
       ? listed
       : ((listed as { jobs?: unknown[]; items?: unknown[] }).jobs ??
