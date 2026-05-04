@@ -36,7 +36,7 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
   it("drafts, applies, and restores disposable disabled cron jobs through the real CLI", async () => {
     const service = new TravelCronService(
       createStatePaths(stateDir),
-      new OpenClawCliCronClient(OPENCLAW_BIN),
+      new OpenClawCliCronClient(OPENCLAW_BIN, (_command, args) => runOpenClaw(args)),
       undefined,
       DEFAULT_CONFIG,
     );
@@ -48,7 +48,7 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
       filter: { nameIncludes: prefix },
     });
 
-    expect(draft.ok).toBe(true);
+    expect(draft).toMatchObject({ ok: true });
     expect((draft.jobs as any[]).map((job) => job.id).sort()).toEqual(
       [implicitId, moveId, stayId].sort(),
     );
