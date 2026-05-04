@@ -674,7 +674,7 @@ export class TravelCronService {
   async doctor(runtimeInfo: DoctorRuntimeInfo = {}): Promise<ToolBody> {
     return this.mutate("doctor", async () => {
       const staleLockCleared = clearStaleLock(this.paths, this.nowMs());
-      const state = await this.reconcileLoaded(loadState(this.paths));
+      const state = loadState(this.paths);
       const lock = readLock(this.paths);
       const cronCheck = await this.checkCronInventory();
       const legacyHelperJobs = cronCheck.ok ? findLegacyHelperJobs(cronCheck.jobs) : [];
