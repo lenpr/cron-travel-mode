@@ -194,9 +194,19 @@ async function runOpenClawJson(args: string[]): Promise<unknown> {
 async function runOpenClaw(args: string[]): Promise<{ stdout: string; stderr: string }> {
   const result = await execFileAsync(OPENCLAW_BIN, args, {
     encoding: "utf8",
+    env: openClawChildEnv(),
     maxBuffer: 10 * 1024 * 1024,
   });
   return { stdout: result.stdout, stderr: result.stderr };
+}
+
+function openClawChildEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.NODE_ENV;
+  delete env.VITEST;
+  delete env.VITEST_POOL_ID;
+  delete env.VITEST_WORKER_ID;
+  return env;
 }
 
 async function sleep(ms: number): Promise<void> {
