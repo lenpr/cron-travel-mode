@@ -61,11 +61,16 @@ ssh horst-tailscale-openclaw '
 
 Expected result:
 
-- the test creates three disabled disposable cron jobs
-- only the explicit-timezone `move` job changes timezone
+- the test creates disabled disposable cron jobs plus one enabled `--no-deliver` disposable cron job
+- explicit-timezone `move` jobs change timezone and preserve enabled/disabled state
 - the `stay` job remains unchanged
 - the implicit-timezone job is refused for editing
-- restore returns the moved job to its original timezone
+- passive scheduled activation applies on the next tool/service call after the trip start
+- missed scheduled activation after trip end becomes `missed_activation_noop` without editing cron
+- overdue restore requires confirmation before reverting timezones
+- early active abort requires confirmation before reverting timezones
+- manually drifted moved jobs are skipped until force restore is confirmed
+- restore returns moved jobs to their original timezone
 - all disposable jobs are removed
 
 ## Cleanup Check
