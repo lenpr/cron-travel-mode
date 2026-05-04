@@ -25,6 +25,7 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
     moveId = await createCronJob(`${prefix}-move`, "7 4 * * *", "America/Los_Angeles");
     stayId = await createCronJob(`${prefix}-stay`, "13 4 * * *", "America/Los_Angeles");
     implicitId = await createCronJob(`${prefix}-implicit`, "19 4 * * *");
+    await waitForJobIds([moveId, stayId, implicitId]);
   }, 120_000);
 
   afterAll(async () => {
@@ -120,14 +121,30 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
   }
 
   async function findJobIdByName(name: string): Promise<string | undefined> {
+    return (await listStableJobs()).find((job) => job.name === name)?.id;
+  }
+
+  async function waitForJobIds(jobIds: string[]): Promise<void> {
+    for (let attempt = 1; attempt <= 20; attempt += 1) {
+      const visible = new Set((await listStableJobs()).map((job) => job.id));
+      if (jobIds.every((id) => visible.has(id))) {
+        return;
+      }
+      await sleep(250 * attempt);
+    }
+    throw new Error(`Created cron jobs were not visible in list: ${jobIds.join(", ")}`);
+  }
+
+  async function listStableJobs() {
     const listed = await runOpenClawJson(["cron", "list", "--json"]);
     const jobs = Array.isArray(listed)
       ? listed
       : ((listed as { jobs?: unknown[]; items?: unknown[] }).jobs ??
         (listed as { items?: unknown[] }).items ??
         []);
-    const match = jobs.find((job) => normalizeCronJob(job)?.name === name);
-    return normalizeCronJob(match)?.id;
+    return jobs
+      .map((job) => normalizeCronJob(job))
+      .filter((job): job is NonNullable<ReturnType<typeof normalizeCronJob>> => job !== null);
   }
 
   async function removeJobsByPrefix(namePrefix: string): Promise<void> {
