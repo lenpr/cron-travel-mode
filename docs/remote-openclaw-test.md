@@ -41,6 +41,7 @@ ssh horst-tailscale-openclaw '
   fi
   cd ~/Coding/cron-travel-mode
   npm ci
+  npm run build
   "$OPENCLAW" plugins install --link "$PWD"
   "$OPENCLAW" plugins enable cron-travel-mode
   "$OPENCLAW" gateway restart

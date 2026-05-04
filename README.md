@@ -81,6 +81,27 @@ Run type checks and tests:
 npm run check
 ```
 
+Build the publishable runtime:
+
+```bash
+npm run build
+```
+
+The package ships built JavaScript from `dist/` for managed OpenClaw installs while keeping TypeScript source in the repository for review and linked development.
+
+## Install From ClawHub
+
+After publication, install the managed package with:
+
+```bash
+openclaw plugins install clawhub:@lenpr/cron-travel-mode
+openclaw plugins enable cron-travel-mode
+openclaw gateway restart
+openclaw plugins doctor
+```
+
+OpenClaw validates the package's advertised plugin API and Gateway compatibility before installing it.
+
 ## Install From GitHub
 
 Install the plugin on an OpenClaw host from a local checkout:
@@ -89,6 +110,7 @@ Install the plugin on an OpenClaw host from a local checkout:
 git clone https://github.com/lenpr/cron-travel-mode.git
 cd cron-travel-mode
 npm ci
+npm run build
 openclaw plugins install --link "$PWD"
 openclaw plugins enable cron-travel-mode
 openclaw gateway restart
@@ -120,6 +142,17 @@ OPENCLAW_BIN=/home/openclaw/.npm-global/bin/openclaw npm run test:e2e:openclaw
 The e2e test creates three disabled disposable cron jobs with names prefixed by `ctm-e2e-*`, moves only the approved explicit-timezone job to `Europe/Berlin`, restores it to `America/Los_Angeles`, verifies disabled state is preserved, and removes the disposable jobs in cleanup.
 
 See [docs/remote-openclaw-test.md](docs/remote-openclaw-test.md) for the remote-host test procedure.
+
+## ClawHub Publishing
+
+ClawHub is the canonical discovery surface for community plugins. This repository includes OpenClaw package metadata, a built runtime entrypoint, a GitHub Actions CI workflow, and dry-run scripts for package validation:
+
+```bash
+npm run pack:dry-run
+npm run clawhub:dry-run
+```
+
+See [docs/clawhub-publishing.md](docs/clawhub-publishing.md) for the full release checklist and publish commands.
 
 ## License
 
