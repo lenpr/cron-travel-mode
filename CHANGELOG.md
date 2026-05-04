@@ -1,6 +1,10 @@
 # Changelog
 
+This project follows the Keep a Changelog section style.
+
 ## 0.1.0 - 2026-05-04
+
+### Added
 
 - Initial Cron Travel Mode plugin release.
 - Adds draft, commit, apply, restore, recover, and status tools for single-trip cron timezone travel mode.

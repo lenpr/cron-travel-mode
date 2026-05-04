@@ -24,23 +24,30 @@ npm run clawhub:dry-run
 
 Run release dry-runs from a clean committed tree. The command records Git source metadata from `HEAD`, so an uncommitted working tree is useful for iteration but not sufficient as a final release proof.
 
-## Publish From GitHub
+`dist/` is intentionally ignored rather than committed. Linked source installs must run `npm run build` before `openclaw plugins install --link "$PWD"`. Managed ClawHub releases should be published from a checked, built local folder or from an npm-pack tarball, not from a raw source checkout that has no `dist/` output.
 
-Publish after the target commit is pushed to the public GitHub repository:
+## Publish From A Built Folder
+
+Publish after the target commit is pushed to the public GitHub repository and the local checkout is clean:
 
 ```bash
 clawhub login
-clawhub package publish lenpr/cron-travel-mode --dry-run
-clawhub package publish lenpr/cron-travel-mode
+npm ci
+npm run check
+npm run clawhub:dry-run
+clawhub package publish . --family code-plugin --source-repo lenpr/cron-travel-mode --source-commit "$(git rev-parse HEAD)" --source-ref "$(git rev-parse --abbrev-ref HEAD)"
 ```
 
-For a tagged release, publish the tag explicitly:
+For a tagged release, publish from a checkout of the tag and pass the tag as source metadata:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
-clawhub package publish lenpr/cron-travel-mode@v0.1.0 --dry-run
-clawhub package publish lenpr/cron-travel-mode@v0.1.0
+git checkout v0.1.0
+npm ci
+npm run check
+clawhub package publish . --family code-plugin --dry-run --source-repo lenpr/cron-travel-mode --source-commit "$(git rev-parse HEAD)" --source-ref v0.1.0
+clawhub package publish . --family code-plugin --source-repo lenpr/cron-travel-mode --source-commit "$(git rev-parse HEAD)" --source-ref v0.1.0
 ```
 
 ## Publish A Local ClawPack

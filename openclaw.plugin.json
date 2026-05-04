@@ -21,21 +21,25 @@
     "properties": {
       "maxInventoryJobs": {
         "type": "number",
+        "description": "Maximum number of compact cron jobs returned during draft inventory before asking the user to filter.",
         "minimum": 1,
         "maximum": 1000
       },
       "maxInventoryBytes": {
         "type": "number",
+        "description": "Maximum serialized compact inventory size returned during draft inventory before asking the user to filter.",
         "minimum": 1024,
         "maximum": 1048576
       },
       "defaultLateRestoreThresholdHours": {
         "type": "number",
+        "description": "Hours after trip end before an overdue restore requires fresh user confirmation.",
         "minimum": 0,
         "maximum": 168
       },
       "activationGraceMinutes": {
         "type": "number",
+        "description": "Minutes after trip start when a passive activation may still proceed without late-activation confirmation.",
         "minimum": 0,
         "maximum": 240
       }

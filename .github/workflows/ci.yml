@@ -27,3 +27,6 @@ jobs:
 
       - name: Verify publish package contents
         run: npm run pack:dry-run
+
+      - name: Validate ClawHub publish metadata
+        run: npm run clawhub:dry-run

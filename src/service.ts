@@ -552,7 +552,8 @@ export class TravelCronService {
         if (late) {
           return this.save(late.state);
         }
-        return this.applyLocked(state, "passive scheduled activation").then(() => loadState(this.paths));
+        await this.applyLocked(state, "passive scheduled activation");
+        return loadState(this.paths);
       }
     }
 

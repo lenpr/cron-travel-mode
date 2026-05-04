@@ -5,6 +5,8 @@ import type { CronClient } from "./types.js";
 import { TravelCronError } from "./types.js";
 
 const execFileAsync = promisify(execFile);
+const DEFAULT_COMMAND_TIMEOUT_MS = 30_000;
+const DEFAULT_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 
 export interface CommandRunner {
   (command: string, args: string[]): Promise<{ stdout: string; stderr: string }>;
@@ -89,7 +91,8 @@ async function defaultRunner(
 ): Promise<{ stdout: string; stderr: string }> {
   return execFileAsync(command, args, {
     encoding: "utf8",
-    maxBuffer: 10 * 1024 * 1024,
+    maxBuffer: DEFAULT_MAX_BUFFER_BYTES,
+    timeout: DEFAULT_COMMAND_TIMEOUT_MS,
   });
 }
 
