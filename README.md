@@ -83,4 +83,4 @@ npm run check
 
 ## License
 
-No license has been selected yet. Add a license before accepting outside contributions or publishing this as reusable open source.
+MIT License. See [LICENSE](LICENSE).
