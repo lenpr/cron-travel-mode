@@ -1,21 +1,56 @@
 {
-  "name": "@openclaw-labs/cron-travel-mode",
+  "name": "@lenpr/cron-travel-mode",
   "version": "0.1.0",
   "description": "OpenClaw plugin for temporarily moving approved cron jobs to travel-local time and restoring them safely.",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "files": [
+    "dist",
     "src",
     "openclaw.plugin.json",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs"
   ],
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "clawhub",
+    "cron",
+    "timezone",
+    "travel"
+  ],
+  "author": "lenpr",
+  "license": "MIT",
+  "homepage": "https://github.com/lenpr/cron-travel-mode#readme",
+  "bugs": {
+    "url": "https://github.com/lenpr/cron-travel-mode/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lenpr/cron-travel-mode.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:e2e:openclaw": "OPENCLAW_E2E=1 vitest run test/e2e-openclaw.test.ts",
-    "check": "npm run build && npm run test"
+    "check": "npm run typecheck && npm run test && npm run build",
+    "pack:dry-run": "npm pack --dry-run",
+    "clawhub:dry-run": "node scripts/clawhub-dry-run.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check"
   },
   "engines": {
     "node": ">=22",
@@ -24,6 +59,9 @@
   "openclaw": {
     "extensions": [
       "./src/index.ts"
+    ],
+    "runtimeExtensions": [
+      "./dist/index.js"
     ],
     "compat": {
       "pluginApi": ">=2026.5.2",
@@ -45,6 +83,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "clawhub": "^0.12.2",
     "openclaw": "^2026.5.3-1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"

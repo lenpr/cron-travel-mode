@@ -3,6 +3,9 @@
   "name": "Cron Travel Mode",
   "description": "Review OpenClaw cron jobs, move approved explicit-timezone cron schedules to travel-local time, and safely restore them.",
   "version": "0.1.0",
+  "activation": {
+    "onStartup": false
+  },
   "contracts": {
     "tools": [
       "generate_travel_cron_plan",
