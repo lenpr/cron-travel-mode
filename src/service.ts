@@ -17,6 +17,7 @@ import {
   clearStaleLock,
   loadState,
   makeInitialState,
+  readLock,
   type StatePaths,
   withStateLock,
   writeState,
@@ -122,6 +123,12 @@ export interface RecoverPlanParams {
   action?: "cancel" | "abort" | "recover";
   force?: boolean;
   confirmOperationId?: string;
+}
+
+export interface DoctorRuntimeInfo {
+  entrypointPath?: string;
+  packageRoot?: string;
+  registeredTools?: string[];
 }
 
 export class TravelCronService {
@@ -664,6 +671,74 @@ export class TravelCronService {
     });
   }
 
+  async doctor(runtimeInfo: DoctorRuntimeInfo = {}): Promise<ToolBody> {
+    return this.mutate("doctor", async () => {
+      const staleLockCleared = clearStaleLock(this.paths, this.nowMs());
+      const state = await this.reconcileLoaded(loadState(this.paths));
+      const lock = readLock(this.paths);
+      const cronCheck = await this.checkCronInventory();
+      const legacyHelperJobs = cronCheck.ok ? findLegacyHelperJobs(cronCheck.jobs) : [];
+      const pluginOwnedMovedJobs = summarizePluginOwnedMovedJobs(state);
+      const drift = state ? await this.computeDrift(state) : { checked: false, reason: "No plan state." };
+      const hasIssues =
+        !cronCheck.ok ||
+        legacyHelperJobs.length > 0 ||
+        Boolean(state?.attentionRequired) ||
+        (isDriftResult(drift) && (drift.drifted.length > 0 || drift.missing.length > 0));
+
+      return {
+        ok: !hasIssues,
+        phase: state?.phase,
+        revision: state?.revision,
+        message: hasIssues
+          ? "Travel cron doctor found items that need review."
+          : "Travel cron doctor did not find install or ownership issues.",
+        checks: {
+          plugin: {
+            entrypointPath: runtimeInfo.entrypointPath,
+            packageRoot: runtimeInfo.packageRoot,
+          },
+          tools: {
+            thisToolCallable: true,
+            registeredTools: runtimeInfo.registeredTools ?? [],
+            allowListVisibility:
+              "OpenClaw does not expose the full host tools.allow list to plugin code. This successful doctor call proves travel_cron_doctor is callable; verify the full cron-travel-mode allow-list with the documented CLI command.",
+          },
+          state: {
+            dir: this.paths.dir,
+            file: this.paths.file,
+            lock: this.paths.lock,
+            hasState: Boolean(state),
+            phase: state?.phase,
+            attentionRequired: state?.attentionRequired,
+            staleLockCleared,
+            currentToolLock: lock
+              ? {
+                  operation: lock.operation,
+                  expiresAt: lock.expiresAt,
+                  note: "The doctor tool holds this advisory lock while the check is running.",
+                }
+              : undefined,
+          },
+          cron: {
+            listOk: cronCheck.ok,
+            error: cronCheck.ok ? undefined : cronCheck.message,
+            legacyHelperJobs,
+          },
+          ownership: {
+            pluginOwnedMovedJobs,
+            liveMovedJobsPluginOwned:
+              pluginOwnedMovedJobs.length > 0
+                ? "Known moved jobs are represented in plugin state."
+                : "No plugin-owned moved jobs are recorded. If jobs are already travel-shifted, use adopt_active_travel_cron_plan with an original-timezone manifest.",
+            drift,
+          },
+        },
+        safestNextAction: hasIssues && state ? safestNextAction(state) : "No action needed.",
+      };
+    });
+  }
+
   private async reconcileLoaded(
     state: TravelCronState | null,
     confirmOperationId?: string,
@@ -1064,6 +1139,16 @@ export class TravelCronService {
     );
   }
 
+  private async checkCronInventory(): Promise<
+    { ok: true; jobs: unknown[] } | { ok: false; message: string }
+  > {
+    try {
+      return { ok: true, jobs: await this.cron.listJobs() };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
+  }
+
   private lateActivationConfirmationIfNeeded(state: TravelCronState): {
     state: TravelCronState;
     body(state: TravelCronState): ToolBody;
@@ -1424,6 +1509,61 @@ function confirmationBody(state: TravelCronState): ToolBody {
   };
 }
 
+function findLegacyHelperJobs(rawJobs: unknown[]): Array<{
+  id?: string;
+  name?: string;
+  marker: string;
+}> {
+  const markers = ["cron_travel_mode", "openclaw:travel-mode", "Travel mode restore"];
+  const matches: Array<{ id?: string; name?: string; marker: string }> = [];
+  for (const rawJob of rawJobs) {
+    const text = JSON.stringify(rawJob);
+    const marker = markers.find((candidate) => text.includes(candidate));
+    if (!marker) {
+      continue;
+    }
+    const object = rawJob && typeof rawJob === "object" ? (rawJob as Record<string, unknown>) : {};
+    matches.push({
+      id: readOptionalString(object.id) ?? readOptionalString(object.jobId),
+      name: readOptionalString(object.name),
+      marker,
+    });
+  }
+  return matches;
+}
+
+function summarizePluginOwnedMovedJobs(state: TravelCronState | null): Array<{
+  id: string;
+  fromTz?: string;
+  toTz?: string;
+  snapshotPresent: boolean;
+  adopted: boolean;
+}> {
+  const applied = state?.apply?.ledger.filter(
+    (entry) => entry.operation === "apply" && entry.status === "applied",
+  );
+  if (!applied) {
+    return [];
+  }
+  const adoptedIds = new Set(state?.adoption?.jobIds ?? []);
+  return applied.map((entry) => ({
+    id: entry.jobId,
+    fromTz: entry.fromTz,
+    toTz: entry.toTz,
+    snapshotPresent: Boolean(state?.apply?.applySnapshot[entry.jobId]),
+    adopted: adoptedIds.has(entry.jobId),
+  }));
+}
+
+function isDriftResult(value: unknown): value is { drifted: string[]; missing: string[] } {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    Array.isArray((value as { drifted?: unknown }).drifted) &&
+    Array.isArray((value as { missing?: unknown }).missing)
+  );
+}
+
 function statusMessage(state: TravelCronState): string {
   switch (state.phase) {
     case "draft":
@@ -1466,6 +1606,10 @@ function safestNextAction(state: TravelCronState): string {
     default:
       return "generate_travel_cron_plan?action=draft";
   }
+}
+
+function readOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }
 
 function suggestFilters(summaries: DraftJobSummary[]): Record<string, string[]> {

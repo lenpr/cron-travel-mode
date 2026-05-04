@@ -87,6 +87,10 @@ class FakeCronClient implements CronClient {
     this.jobs[jobId] = current;
   }
 
+  add(jobId: string, job: AnyJob): void {
+    this.jobs[jobId] = clone(job);
+  }
+
   timezone(jobId: string): string | undefined {
     return normalizeCronJob(this.jobs[jobId])?.schedule.tz;
   }
@@ -288,6 +292,57 @@ describe("travel cron plan flow", () => {
     expect(adopted.ok).toBe(false);
     expect(adopted.code).toBe("adopt_target_timezone_mismatch");
     expect(cron.timezone("gratitude")).toBe("America/Los_Angeles");
+  });
+
+  it("reports install health and legacy helper matches through doctor", async () => {
+    cron.mutate("gratitude", (job) => {
+      job.schedule = {
+        ...(job.schedule ?? {}),
+        kind: "cron",
+        expr: "0 9 * * *",
+        tz: "Europe/Berlin",
+      };
+    });
+    cron.add(
+      "legacy-helper",
+      cronJob("legacy-helper", "Travel mode restore", "0 12 * * *", "America/Los_Angeles"),
+    );
+
+    const adopted = await service.adoptActive({
+      startsAt: "2026-05-01T06:00:00.000Z",
+      endsAt: "2026-05-06T08:00:00.000Z",
+      targetTz: "Europe/Berlin",
+      movedJobs: [{ id: "gratitude", originalTz: "America/Los_Angeles" }],
+    });
+    expect(adopted.ok).toBe(true);
+
+    const doctor = await service.doctor({
+      entrypointPath: "/repo/dist/index.js",
+      packageRoot: "/repo",
+      registeredTools: ["travel_cron_doctor"],
+    });
+
+    expect(doctor.ok).toBe(false);
+    expect((doctor.checks as any).plugin).toMatchObject({
+      entrypointPath: "/repo/dist/index.js",
+      packageRoot: "/repo",
+    });
+    expect((doctor.checks as any).cron.legacyHelperJobs).toEqual([
+      {
+        id: "legacy-helper",
+        name: "Travel mode restore",
+        marker: "Travel mode restore",
+      },
+    ]);
+    expect((doctor.checks as any).ownership.pluginOwnedMovedJobs).toMatchObject([
+      {
+        id: "gratitude",
+        fromTz: "America/Los_Angeles",
+        toTz: "Europe/Berlin",
+        snapshotPresent: true,
+        adopted: true,
+      },
+    ]);
   });
 
   it("detects incompatible cron edit behavior and best-effort restores the edited job", async () => {

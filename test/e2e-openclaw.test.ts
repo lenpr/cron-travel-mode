@@ -287,6 +287,20 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
     expect(adopted.ok).toBe(true);
     expect(adopted.phase).toBe("active");
     expect((await showStable(ids.adopt)).schedule.tz).toBe("Europe/Berlin");
+    const doctor = await service.doctor({
+      entrypointPath: "e2e",
+      packageRoot: process.cwd(),
+      registeredTools: ["travel_cron_doctor"],
+    });
+    expect((doctor.checks as any).ownership.pluginOwnedMovedJobs).toMatchObject([
+      {
+        id: ids.adopt,
+        fromTz: "America/Los_Angeles",
+        toTz: "Europe/Berlin",
+        snapshotPresent: true,
+        adopted: true,
+      },
+    ]);
 
     const restored = await service.restore({ expectedRevision: adopted.revision as number });
     expect(restored.ok).toBe(true);

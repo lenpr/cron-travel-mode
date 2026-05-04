@@ -1,4 +1,6 @@
 import { Type } from "@sinclair/typebox";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { OpenClawCliCronClient } from "./cron-client.js";
 import { createStatePaths } from "./state.js";
@@ -31,6 +33,8 @@ export default definePluginEntry({
   register(api) {
     const statePaths = createStatePaths(api.runtime.state.resolveStateDir());
     const config = readConfig(api.pluginConfig ?? {});
+    const entrypointPath = fileURLToPath(import.meta.url);
+    const packageRoot = inferPackageRoot(entrypointPath);
     const service = new TravelCronService(
       statePaths,
       new OpenClawCliCronClient("openclaw", async (command, args) => {
@@ -241,6 +245,23 @@ export default definePluginEntry({
       },
       { optional: true },
     );
+
+    api.registerTool({
+      name: TOOL_NAMES.doctor,
+      label: "Travel cron doctor",
+      description:
+        "Read-only installation and ownership self-check for state paths, legacy helper cron jobs, plugin-owned moved jobs, and allow-list verification guidance.",
+      parameters: Type.Object({}, { additionalProperties: false }),
+      async execute() {
+        return result(
+          await service.doctor({
+            entrypointPath,
+            packageRoot,
+            registeredTools: Object.values(TOOL_NAMES),
+          }),
+        );
+      },
+    });
   },
 });
 
@@ -262,6 +283,12 @@ function readConfig(pluginConfig: Record<string, unknown>): TravelCronConfig {
 
 function readNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function inferPackageRoot(entrypointPath: string): string {
+  const entryDir = path.dirname(entrypointPath);
+  const parentName = path.basename(entryDir);
+  return parentName === "dist" || parentName === "src" ? path.dirname(entryDir) : entryDir;
 }
 
 interface GenerateToolInput {

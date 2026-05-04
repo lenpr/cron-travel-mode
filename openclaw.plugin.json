@@ -13,7 +13,8 @@
       "apply_travel_cron_plan",
       "restore_travel_cron_plan",
       "abort_or_recover_travel_cron",
-      "travel_cron_status"
+      "travel_cron_status",
+      "travel_cron_doctor"
     ]
   },
   "configSchema": {

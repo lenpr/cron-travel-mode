@@ -7,6 +7,7 @@ export const TOOL_NAMES = {
   restore: "restore_travel_cron_plan",
   recover: "abort_or_recover_travel_cron",
   status: "travel_cron_status",
+  doctor: "travel_cron_doctor",
 } as const;
 
 export type Decision = "move" | "stay" | "needs_review";
