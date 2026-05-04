@@ -29,6 +29,7 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
 
   afterAll(async () => {
     await Promise.allSettled(createdIds.map((id) => runOpenClaw(["cron", "rm", id, "--json"])));
+    await removeJobsByPrefix(prefix);
     fs.rmSync(stateDir, { recursive: true, force: true });
   }, 120_000);
 
@@ -102,10 +103,17 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
       args.push("--tz", tz);
     }
 
-    const created = await runOpenClawJson(args);
+    const createdResult = await runOpenClaw(args);
+    const created = createdResult.stdout.trim()
+      ? JSON.parse(createdResult.stdout)
+      : undefined;
     const id = readJobId(created) ?? (await findJobIdByName(name));
     if (!id) {
-      throw new Error(`Unable to resolve created cron job id for ${name}`);
+      throw new Error(
+        `Unable to resolve created cron job id for ${name}; stdout=${JSON.stringify(
+          createdResult.stdout,
+        )}; stderr=${JSON.stringify(createdResult.stderr)}`,
+      );
     }
     createdIds.push(id);
     return id;
@@ -120,6 +128,21 @@ maybeDescribe("OpenClaw cron CLI e2e", () => {
         []);
     const match = jobs.find((job) => normalizeCronJob(job)?.name === name);
     return normalizeCronJob(match)?.id;
+  }
+
+  async function removeJobsByPrefix(namePrefix: string): Promise<void> {
+    const listed = await runOpenClawJson(["cron", "list", "--json"]);
+    const jobs = Array.isArray(listed)
+      ? listed
+      : ((listed as { jobs?: unknown[]; items?: unknown[] }).jobs ??
+        (listed as { items?: unknown[] }).items ??
+        []);
+    const matches = jobs
+      .map((job) => normalizeCronJob(job))
+      .filter((job): job is NonNullable<ReturnType<typeof normalizeCronJob>> =>
+        Boolean(job?.name.startsWith(namePrefix)),
+      );
+    await Promise.allSettled(matches.map((job) => runOpenClaw(["cron", "rm", job.id, "--json"])));
   }
 });
 
