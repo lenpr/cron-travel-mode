@@ -51,7 +51,7 @@
     "test:e2e:openclaw": "OPENCLAW_E2E=1 vitest run test/e2e-openclaw.test.ts",
     "check": "npm run typecheck && npm run test && npm run build",
     "pack:dry-run": "npm pack --dry-run",
-    "clawhub:dry-run": "clawhub package publish . --family code-plugin --dry-run --source-repo lenpr/cron-travel-mode --source-commit $(git rev-parse HEAD) --source-ref $(git rev-parse --abbrev-ref HEAD)",
+    "clawhub:dry-run": "clawhub package publish . --family code-plugin --name @lenpr/cron-travel-mode --display-name \"Cron Travel Mode\" --version 0.1.0 --changelog \"Initial release: review cron inventory, move approved explicit-timezone jobs to travel-local time, restore safely, and recover from drift or overdue states.\" --tags latest,stable --source-repo lenpr/cron-travel-mode --source-commit $(git rev-parse HEAD) --source-ref $(git rev-parse --abbrev-ref HEAD) --dry-run",
     "prepack": "npm run build",
     "prepublishOnly": "npm run check"
   },

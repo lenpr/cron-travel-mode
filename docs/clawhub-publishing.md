@@ -35,7 +35,16 @@ clawhub login
 npm ci
 npm run check
 npm run clawhub:dry-run
-clawhub package publish . --family code-plugin --source-repo lenpr/cron-travel-mode --source-commit "$(git rev-parse HEAD)" --source-ref "$(git rev-parse --abbrev-ref HEAD)"
+clawhub package publish . \
+  --family code-plugin \
+  --name @lenpr/cron-travel-mode \
+  --display-name "Cron Travel Mode" \
+  --version 0.1.0 \
+  --changelog "Initial release: review cron inventory, move approved explicit-timezone jobs to travel-local time, restore safely, and recover from drift or overdue states." \
+  --tags latest,stable \
+  --source-repo lenpr/cron-travel-mode \
+  --source-commit "$(git rev-parse HEAD)" \
+  --source-ref "$(git rev-parse --abbrev-ref HEAD)"
 ```
 
 For a tagged release, publish from a checkout of the tag and pass the tag as source metadata:
@@ -46,8 +55,27 @@ git push origin v0.1.0
 git checkout v0.1.0
 npm ci
 npm run check
-clawhub package publish . --family code-plugin --dry-run --source-repo lenpr/cron-travel-mode --source-commit "$(git rev-parse HEAD)" --source-ref v0.1.0
-clawhub package publish . --family code-plugin --source-repo lenpr/cron-travel-mode --source-commit "$(git rev-parse HEAD)" --source-ref v0.1.0
+clawhub package publish . \
+  --family code-plugin \
+  --name @lenpr/cron-travel-mode \
+  --display-name "Cron Travel Mode" \
+  --version 0.1.0 \
+  --changelog "Initial release: review cron inventory, move approved explicit-timezone jobs to travel-local time, restore safely, and recover from drift or overdue states." \
+  --tags latest,stable \
+  --source-repo lenpr/cron-travel-mode \
+  --source-commit "$(git rev-parse HEAD)" \
+  --source-ref v0.1.0 \
+  --dry-run
+clawhub package publish . \
+  --family code-plugin \
+  --name @lenpr/cron-travel-mode \
+  --display-name "Cron Travel Mode" \
+  --version 0.1.0 \
+  --changelog "Initial release: review cron inventory, move approved explicit-timezone jobs to travel-local time, restore safely, and recover from drift or overdue states." \
+  --tags latest,stable \
+  --source-repo lenpr/cron-travel-mode \
+  --source-commit "$(git rev-parse HEAD)" \
+  --source-ref v0.1.0
 ```
 
 ## Publish A Local ClawPack
@@ -57,8 +85,27 @@ For the most explicit artifact path, create an npm-pack tarball and upload that 
 ```bash
 npm run check
 TARBALL=$(npm pack --silent)
-clawhub package publish "$TARBALL" --family code-plugin --dry-run
-clawhub package publish "$TARBALL" --family code-plugin
+clawhub package publish "$TARBALL" \
+  --family code-plugin \
+  --name @lenpr/cron-travel-mode \
+  --display-name "Cron Travel Mode" \
+  --version 0.1.0 \
+  --changelog "Initial release: review cron inventory, move approved explicit-timezone jobs to travel-local time, restore safely, and recover from drift or overdue states." \
+  --tags latest,stable \
+  --source-repo lenpr/cron-travel-mode \
+  --source-commit "$(git rev-parse HEAD)" \
+  --source-ref "$(git rev-parse --abbrev-ref HEAD)" \
+  --dry-run
+clawhub package publish "$TARBALL" \
+  --family code-plugin \
+  --name @lenpr/cron-travel-mode \
+  --display-name "Cron Travel Mode" \
+  --version 0.1.0 \
+  --changelog "Initial release: review cron inventory, move approved explicit-timezone jobs to travel-local time, restore safely, and recover from drift or overdue states." \
+  --tags latest,stable \
+  --source-repo lenpr/cron-travel-mode \
+  --source-commit "$(git rev-parse HEAD)" \
+  --source-ref "$(git rev-parse --abbrev-ref HEAD)"
 rm -f "$TARBALL"
 ```
 
