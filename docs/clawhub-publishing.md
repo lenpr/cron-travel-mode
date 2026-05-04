@@ -20,11 +20,9 @@ npm run pack:dry-run
 npm run clawhub:dry-run
 ```
 
-`npm run check` typechecks, runs unit tests, and builds `dist/`. `npm run pack:dry-run` verifies the npm-pack payload that ClawHub will inspect. `npm run clawhub:dry-run` asks ClawHub to build the publish plan without uploading a release.
+`npm run check` typechecks, runs unit tests, and builds `dist/`. `npm run pack:dry-run` verifies the npm-pack payload. `npm run clawhub:dry-run` asks ClawHub to validate the folder publish plan without uploading a release.
 
-The dry-run script creates a temporary npm-pack tarball and sends that exact artifact to `clawhub package publish --dry-run --family code-plugin`, then removes the temporary file.
-
-Run release dry-runs from a clean committed tree. The script records Git source metadata from `HEAD`, so an uncommitted working tree is useful for iteration but not sufficient as a final release proof.
+Run release dry-runs from a clean committed tree. The command records Git source metadata from `HEAD`, so an uncommitted working tree is useful for iteration but not sufficient as a final release proof.
 
 ## Publish From GitHub
 
@@ -57,7 +55,7 @@ clawhub package publish "$TARBALL" --family code-plugin
 rm -f "$TARBALL"
 ```
 
-This is the route used by `npm run clawhub:dry-run`, except the script always keeps the publish operation in dry-run mode and cleans up the temporary tarball automatically.
+Use this tarball route for the final release when you want the ClawHub artifact to match the exact npm-pack payload verified by `npm run pack:dry-run`.
 
 ## Install After Publication
 
