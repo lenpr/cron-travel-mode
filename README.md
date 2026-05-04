@@ -89,8 +89,9 @@ Install the plugin on an OpenClaw host from a local checkout:
 git clone https://github.com/lenpr/cron-travel-mode.git
 cd cron-travel-mode
 npm ci
-openclaw plugins install --link --force "$PWD"
+openclaw plugins install --link "$PWD"
 openclaw plugins enable cron-travel-mode
+openclaw gateway restart
 openclaw plugins doctor
 ```
 
